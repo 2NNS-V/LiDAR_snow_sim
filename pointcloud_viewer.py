@@ -156,7 +156,7 @@ AUDI = DATASETS_ROOT / 'A2D2/camera_lidar_semantic_bboxes'
 LYFT = DATASETS_ROOT / 'LyftLevel5/Perception/train_lidar'
 ARGO = DATASETS_ROOT / 'Argoverse'
 PANDA = DATASETS_ROOT / 'PandaSet'
-DENSE = DATASETS_ROOT / 'DENSE/SeeingThroughFog/lidar_hdl64_strongest'
+DENSE = DATASETS_ROOT / 'SeeingThroughFogCompressed/lidar_hdl64_strongest'
 KITTI = DATASETS_ROOT / 'KITTI/3D/training/velodyne'
 WAYMO = DATASETS_ROOT / 'WaymoOpenDataset/WOD/train/velodyne'
 HONDA = DATASETS_ROOT / 'Honda_3D/scenarios'
@@ -1796,7 +1796,20 @@ class LidarWindow(QMainWindow):
         self.d_type = np.float32
         self.show_fov_only = False
         self.intensity_multiplier = 255
-        self.color_dict[6] = 'not available'
+        # self.color_dict[6] = 'not available'
+        self.color_dict[6] = 'channel'
+
+        self.toggle_img_btn.setEnabled(True)
+        self.show_fov_only_btn.setEnabled(True)
+
+        self.toggle_temp_btn.setEnabled(True)
+
+        self.sensor = self.cb_sensors.currentText()
+        self.signal = self.cb_signals.currentText()
+
+        self.cb_splits.setEnabled(True)
+        self.cb_sensors.setEnabled(True)
+        self.cb_signals.setEnabled(True)
 
     def load_kitti(self) -> None:
 
@@ -1817,6 +1830,7 @@ class LidarWindow(QMainWindow):
 
         self.index = 0
         self.set_kitti()
+        self.cb_splits.setCurrentText('all')
         self.show_pointcloud(self.file_list[self.index])
 
     def set_audi(self) -> None:
@@ -1994,11 +2008,12 @@ class LidarWindow(QMainWindow):
 
         self.file_list = []
 
-        with open('lib/LiDAR_fog_sim/file_lists/nuScenes.pkl', 'rb') as f:
-            file_list = pkl.load(f)
+        # .txt 파일에서 파일 리스트 읽기
+        with open('lib/LiDAR_fog_sim/file_lists/nuScenes.txt', 'r') as f:
+            file_list = [line.strip() for line in f if line.strip()]
 
         for file in file_list:
-            self.file_list.append(str(NUSCENES) + file)
+            self.file_list.append(str(NUSCENES) + '/' + file)
 
         self.index = 0
         self.set_nuscenes()
@@ -2191,6 +2206,7 @@ class LidarWindow(QMainWindow):
     def toggle_seed(self) -> None:
 
         self.fixed_seed = not self.fixed_seed
+        print(self.fixed_seed)
         self.toggle_seed_btn.setText('seed fixed' if self.fixed_seed else 'seed not fixed')
         self.snowfall_change()
 
@@ -2664,7 +2680,7 @@ class LidarWindow(QMainWindow):
 
         if self.dataset == 'DENSE':
             self.cb_velocity.setEnabled(True)
-            self.cb_estimation.setEnabled(True)
+            self.cb_estimation.setEnabled(True) 
             self.flat_earth_btn.setEnabled(True)
             self.toggle_wet_btn.setEnabled(True)
             self.toggle_snow_btn.setEnabled(True)
@@ -3015,6 +3031,11 @@ class LidarWindow(QMainWindow):
         if self.prediction_boxes and self.show_predictions:
             self.add_predictions()
 
+        # soeun
+        output_path = "simulated_snowflake_output.bin"
+        pc.astype(np.float32).tofile(output_path)
+        print(f"Saved snowflake-augmented point cloud to: {output_path}")
+        
         if SAVE_IMAGES:
 
             pixmap = QPixmap(self.size())
@@ -3397,7 +3418,8 @@ if __name__ == '__main__':
     logging.basicConfig(format='%(message)s', level=logging.INFO)
     logging.debug(pandas.__version__)
 
-    app = QtGui.QApplication([])
+    # app = QtGui.QApplication([])
+    app = QApplication([])
     lidar_window = LidarWindow()
     lidar_window.show()
     app.exec_()
